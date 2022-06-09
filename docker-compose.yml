@@ -1,0 +1,55 @@
+version: '3'
+services:
+  jenkins:
+#    build:
+#      context: ./build/jenkins
+    image: jenkins/jenkins:lts-jdk11
+    environment:
+      - JENKINS_SLAVE_AGENT_PORT=50000
+    volumes:
+      - jenkins-data:/var/jenkins_home
+    networks:
+      - jenkins-internal
+      - host-external
+    restart: always
+
+  agent1:
+    image: jenkins/jnlp-agent-coresdk:5.0
+    environment:
+      - JENKINS_URL=http://jenkins:8080
+      - JENKINS_TUNNEL=jenkins:50000
+      - JENKINS_SECRET=a064c5c085f2db39b27d1f0755ad8643fa6ef1b763a45b8eb396011f4596b353
+      - JENKINS_AGENT_NAME=agent1
+      - JENKINS_AGENT_WORKDIR=/home/jenkins/agent1
+    depends_on:
+      - jenkins
+    networks:
+      - jenkins-internal
+    restart: always
+
+  http:
+    image: nginx
+    volumes:
+      - ./conf/nginx/templates:/etc/nginx/templates
+    depends_on:
+      - jenkins
+    ports:
+      - 80:80
+    environment:
+      - NGINX_HOST=server.athe.nova
+      - NGINX_PORT=80
+    networks:
+      - jenkins-internal
+      - host-external
+    restart: always
+
+volumes:
+  jenkins-data: {}
+
+networks:
+  jenkins-internal:
+    driver: bridge
+    internal: true
+  host-external:
+    driver: bridge
+    internal: false
